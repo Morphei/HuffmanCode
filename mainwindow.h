@@ -5,6 +5,7 @@
 #include <vertex.h>
 #include <QtConcurrent/QtConcurrent>
 #include <calculator.h>
+#include <QTime>
 
 namespace Ui {
 class MainWindow;
@@ -34,11 +35,19 @@ private slots:
 
     void on_MainWindow_destroyed();
 
+    void on_textEdit_textChanged();
+
 private:
-    QFutureWatcher<std::vector<Vertex>> watcher;
     Ui::MainWindow *ui;
     void createVertexArray();
-    std::vector<Vertex> arrayOfVertexes;
+    std::vector<Vertex*>* arrayOfVertexes;
+    QMap<float, Vertex*> map;
+    QTime time;
+
+    bool entropyCount;
+    float entropy;
 };
 
 #endif // MAINWINDOW_H
+
+

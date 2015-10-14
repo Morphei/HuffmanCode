@@ -4,14 +4,14 @@
 #include "vertex.h"
 #include "qstatusbar.h"
 #include "qprogressdialog.h"
+#include <QTime>
 
 class Graph
 {
 public:
-    Graph(std::vector<Vertex> array, QWidget* mWidget);
+    Graph(std::vector<Vertex *> *array, QWidget* mWidget);
     void createTree();
-    std::vector<Vertex> codding();
-    Vertex findSmallest();
+    QMultiMap<float, Vertex *> codding();
 
 private:
 
@@ -22,10 +22,18 @@ private:
 
     int numOfResults;
 
+    int compar(const Vertex* first, const Vertex* second);
+
+    bool lessThan(Vertex* first, Vertex* second)
+    {
+        return first->getValue() < second->getValue();
+    }
+
     QWidget* widget;
-    std::vector<Vertex> rootVertexes;
-    std::vector<Vertex> vertexes;
-    std::vector<node> graph;
+    std::vector<Vertex*>* rootVertexes;
+    std::vector<Vertex*>* vertexes;
+
+    void enter(Vertex* parent, int *progressPtr, QProgressDialog* dialog);
 };
 
 #endif // GRAPH_H

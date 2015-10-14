@@ -18,6 +18,9 @@ public:
     QString getName();
     QString getCode();
 
+    Vertex* child1;
+    Vertex* child2;
+
 private:
     bool rootFlag;
     float value;

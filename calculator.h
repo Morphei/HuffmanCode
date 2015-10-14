@@ -10,16 +10,16 @@
 #include "graph.h"
 #include "mainwindow.h"
 #include "qstatusbar.h"
-#include "encodethread.h"
+
 
 class Calculator
 {
 public:
-    Calculator(std::vector<Vertex> array, QWidget* mainWidget);
+    Calculator(std::vector<Vertex*> *array, QWidget* mainWidget);
     float entropy();
-    std::vector<Vertex> codding();
+    QMultiMap<float, Vertex *> codding();
 private:
-    std::vector<Vertex> arrayOfVertexes;
+    std::vector<Vertex*>* arrayOfVertexes;
     QWidget* widget;
 
 };

@@ -16,15 +16,15 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     calculator.cpp \
     vertex.cpp \
-    graph.cpp \
-    encodethread.cpp
+    graph.cpp
 
 HEADERS  += mainwindow.h \
     calculator.h \
     vertex.h \
-    graph.h \
-    encodethread.h
+    graph.h
 
 FORMS    += mainwindow.ui
 
 CONFIG += c++11
+CONFIG += link_pkgconfig
+PKGCONFIG += x11

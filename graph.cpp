@@ -1,107 +1,141 @@
 #include "graph.h"
 #include "qdebug.h"
+#include "QtAlgorithms"
 
-Graph::Graph(std::vector<Vertex> array, QWidget *mWidget)
+Graph::Graph(std::vector<Vertex*>* array, QWidget *mWidget)
 {
+    rootVertexes = new std::vector<Vertex*>;
+    vertexes = new std::vector<Vertex*>;
     rootVertexes = array;
     widget = mWidget;
-    numOfResults = array.size();
+    numOfResults = array->size();
 }
 
 void Graph::createTree()
 {
-    Vertex temp1, temp2;
-    node tempNode;
+//    node tempNode;
 
-    QProgressDialog progress("Creating tree...", "Abort", 0, rootVertexes.size() - 1, widget);
-    progress.setWindowModality(Qt::WindowModal);
-    int n = 0;
-    while(rootVertexes.size() != 1)
+    int progressMax = rootVertexes->size()-1;
+    QProgressDialog* progress = new QProgressDialog("Creating tree...", "Abort", 0, progressMax, widget);
+    progress->setWindowTitle("Please wait...");
+    progress->setWindowModality(Qt::WindowModal);
+
+    int progressVal = 1;
+
+//    qSort(rootVertexes->begin(), rootVertexes->end());
+
+
+    progress->show();
+    progress->raise();
+    progress->activateWindow();
+
+        while(rootVertexes->size() != 1)
         {
-        if(progress.wasCanceled())
-            break;
-        temp1 = findSmallest();
-        temp2 = findSmallest();
+            progress->setValue(progressVal);
 
-        tempNode.children1 = temp1;
-        tempNode.children2 = temp2;
 
-        tempNode.parent.setValue(temp1.getValue() + temp2.getValue());
-        tempNode.parent.setName(temp1.getName() + temp2.getName());
+            if(progress->wasCanceled())
+                break;
 
-        graph.push_back(tempNode);
-        rootVertexes.push_back(tempNode.parent);
-        n++;
-        progress.setValue(n);
+            Vertex *temp1 = new Vertex;
+            Vertex *temp2 = new Vertex;
+            Vertex *tempParent = new Vertex;
+            temp1 = rootVertexes->at(rootVertexes->size()-1);
+            rootVertexes->pop_back();
+            temp2 = rootVertexes->at(rootVertexes->size()-1);
+            rootVertexes->pop_back();
+
+            tempParent->child1 = temp1;
+            tempParent->child2 = temp2;
+            tempParent->setValue(temp1->getValue() + temp2->getValue());
+            tempParent->setName(temp1->getName() + temp2->getName());
+
+            if(round(tempParent->getValue()*10)/10 == 1.0)
+            {
+                rootVertexes->push_back(tempParent);
+                progress->setValue(progressMax);
+                break;
+            }
+
+            std::vector<Vertex*>::iterator it;
+            it = rootVertexes->begin();
+            bool inserted = false;
+
+                while (it != rootVertexes->end())
+                {
+                    if((*it)->getValue() <= tempParent->getValue())
+                        {
+                            rootVertexes->insert(it, tempParent);
+                            inserted = true;
+                            progress->setValue(progressMax);
+                            break;
+                        }
+                    else
+                            it++;
+                }
+
+                if(!inserted)
+                    rootVertexes->insert(it, tempParent);
+
+                progressVal++;
         }
+        delete progress;
 }
 
-std::vector<Vertex> Graph::codding()
+QMultiMap<float, Vertex*> Graph::codding()
 {
-    rootVertexes.clear();
+    int progressMax = rootVertexes->size()-1;
+    QProgressDialog* progress = new QProgressDialog("Codding...", "Abort", 0, progressMax, widget);
+    progress->setWindowTitle("Please wait...");
+    progress->setWindowModality(Qt::WindowModal);
+    int progressVal = 0;
 
-    node* tempNode;
+    Vertex* temp;
+    temp = rootVertexes->at(0);
+    temp->setCode("");
+    progress->show();
+    progress->raise();
+    progress->activateWindow();
+    enter(temp, &progressVal, progress);
 
-    int i = graph.size()-1;
-    QProgressDialog progress("Encoding...", "Abort", 0, numOfResults, widget);
-    progress.setWindowModality(Qt::WindowModal);
-
-    while (i >= 0)
+    QMultiMap<float, Vertex*> map;
+    for(int i = 0; i < vertexes->size(); i++)
     {
-        if(progress.wasCanceled())
-            break;
-
-        tempNode = &graph.at(i);
-
-        for(int j = 0; j < graph.size(); j++)
-        {
-            if(tempNode->parent.getName() == graph.at(j).children1.getName())
-                tempNode->parent.setCode(graph.at(j).children1.getCode());
-            if(tempNode->parent.getName() == graph.at(j).children2.getName())
-                tempNode->parent.setCode(graph.at(j).children2.getCode());
-
-        }
-
-        tempNode->children1.setCode(tempNode->parent.getCode() + "0");
-        tempNode->children2.setCode(tempNode->parent.getCode() + "1");
-
-        if(tempNode->children1.isRoot())
-        {
-            rootVertexes.push_back(tempNode->children1);
-        }
-
-        if(tempNode->children2.isRoot())
-        {
-            rootVertexes.push_back(tempNode->children2);
-        }
-        progress.setValue(rootVertexes.size());
-            i--;
+        map.insert(vertexes->at(i)->getValue(), vertexes->at(i));
     }
 
-    return rootVertexes;
+    delete progress;
+    return map;
 }
 
-Vertex Graph::findSmallest()
+void Graph::enter(Vertex *parent,int *progressPtr, QProgressDialog* dialog)
 {
-    Vertex temp;
-    temp = (*rootVertexes.begin());
-    for(int i = 0; i < rootVertexes.size(); i++)
-    {
-        if(temp.getValue() > rootVertexes.at(i).getValue())
-        {
-            temp = rootVertexes.at(i);
-        }
-    }
+    parent->child1->setCode(parent->getCode() + '1');
+    parent->child2->setCode(parent->getCode() + '0');
 
-    bool flag = true;
-    for(int i = 0; i < rootVertexes.size(); i++)
+    if(dialog->wasCanceled())
     {
-        if(flag && temp.getValue() == rootVertexes.at(i).getValue())
-        {
-            rootVertexes.erase(rootVertexes.begin() + i);
-            flag = false;
-        }
-    }
 
-    return temp;
+    }
+    else
+    {
+        if(parent->child1->isRoot())
+        {
+            vertexes->push_back(parent->child1);
+            progressPtr++;
+            dialog->setValue(*progressPtr);
+        }
+        else
+            enter(parent->child1, progressPtr, dialog);
+
+
+        if(parent->child2->isRoot())
+        {
+            vertexes->push_back(parent->child2);
+            progressPtr++;
+            dialog->setValue(*progressPtr);
+        }
+        else
+            enter(parent->child2, progressPtr, dialog);
+    }
 }

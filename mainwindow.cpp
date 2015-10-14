@@ -5,27 +5,29 @@
 #include "calculator.h"
 #include "QMessageBox"
 #include "vertex.h"
-
+#include <X11/Xlib.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    XInitThreads();
     ui->setupUi(this);
     ui->pushButton_2->setEnabled(false);
     ui->horizontalSlider->setEnabled(false);
+    entropy = 0;
+    entropyCount = false;
 }
 
 MainWindow::~MainWindow()
 {
-    watcher.cancel();
+
     delete ui;
 }
 
 void MainWindow::createVertexArray()
 {
-    std::vector<Vertex> vertex;
-    Vertex tempVertex;
+    std::vector<Vertex*>* vertex = new std::vector<Vertex*>;
     QString name, value, str;
     str = ui->textEdit->toPlainText();
     str.remove(' ');
@@ -38,6 +40,7 @@ void MainWindow::createVertexArray()
 
     for(int i = 0; i < list.size(); i++)
     {
+        Vertex *tempVertex = new Vertex;
         int j = 0;
         while (list.at(i).at(j) != '-') {
             name += list.at(i).at(j);
@@ -51,10 +54,10 @@ void MainWindow::createVertexArray()
             j++;
         }
 
-        tempVertex.setName(name);
-        tempVertex.setValue(value.toFloat());
-        tempVertex.setRoot();
-        vertex.push_back(tempVertex);
+        tempVertex->setName(name);
+        tempVertex->setValue(value.toFloat());
+        tempVertex->setRoot();
+        vertex->push_back(tempVertex);
         name.clear();
         value.clear();
     }
@@ -66,21 +69,35 @@ void MainWindow::createVertexArray()
         box.setText("Wrong input!");
         box.show();
     }
+
+    if(!entropyCount)
+    {
+    for(int i = 0; i < arrayOfVertexes->size(); i++)
+        {
+            entropy += arrayOfVertexes->at(i)->getValue() * log2(arrayOfVertexes->at(i)->getValue());
+        }
+    entropy = -entropy;
+
+    ui->Entropy->setText(QString::number(entropy));
+
+    entropyCount = true;
+    }
 }
 
 void MainWindow::on_pushButton_2_clicked()
 {
     createVertexArray();
-    std::vector<Vertex> vertexes;
-    std::vector<Vertex> tempArray1, tempArray2;
+    std::vector<Vertex*> vertexes/* = new std::vector<Vertex*>*/;
+    std::vector<Vertex*> tempArray1/* = new std::vector<Vertex*>*/;
+    std::vector<Vertex*> tempArray2/* = new std::vector<Vertex*>*/;
 
-    Vertex temp;
 
     int rounds = ui->horizontalSlider->value();
 
     bool currentArray = false;
-    tempArray1 = arrayOfVertexes;
+    tempArray1 = *arrayOfVertexes;
 
+    int j = 0;
     for(int i = 1; i < rounds; i++)
     {
         if(!currentArray)
@@ -88,15 +105,16 @@ void MainWindow::on_pushButton_2_clicked()
         else
             tempArray1.clear();
 
-        for(int j = 0; j < arrayOfVertexes.size(); j++)
+        for(j = 0; j < arrayOfVertexes->size(); j++)
         {
             if(!currentArray)
             {
                 for(int n = 0; n < tempArray1.size(); n++)
                 {
-                    temp.setName(tempArray1.at(n).getName() + arrayOfVertexes.at(j).getName());
-                    temp.setRoot();
-                    temp.setValue(tempArray1.at(n).getValue() * arrayOfVertexes.at(j).getValue());
+                    Vertex* temp = new Vertex;
+                    temp->setName(tempArray1.at(n)->getName() + arrayOfVertexes->at(j)->getName());
+                    temp->setRoot();
+                    temp->setValue(tempArray1.at(n)->getValue() * arrayOfVertexes->at(j)->getValue());
                     tempArray2.push_back(temp);
                 }
             }
@@ -104,13 +122,15 @@ void MainWindow::on_pushButton_2_clicked()
             {
                 for(int n = 0; n < tempArray2.size(); n++)
                 {
-                    temp.setName(tempArray2.at(n).getName() + arrayOfVertexes.at(j).getName());
-                    temp.setRoot();
-                    temp.setValue(tempArray2.at(n).getValue() * arrayOfVertexes.at(j).getValue());
+                    Vertex* temp = new Vertex;
+                    temp->setName(tempArray2.at(n)->getName() + arrayOfVertexes->at(j)->getName());
+                    temp->setRoot();
+                    temp->setValue(tempArray2.at(n)->getValue() * arrayOfVertexes->at(j)->getValue());
                     tempArray1.push_back(temp);
                 }
             }
         }
+        j=0;
         currentArray = !currentArray;
     }
 
@@ -119,14 +139,11 @@ void MainWindow::on_pushButton_2_clicked()
     else vertexes = tempArray1;
 
 
-    Calculator* calculator = new Calculator(vertexes, ui->centralWidget);
-    ui->Entropy->setText(QString::number(calculator->entropy()));
+    Calculator* calculator = new Calculator(&vertexes, ui->centralWidget);
 
-//    connect(&watcher, SIGNAL(finished()), this, SLOT(encodingEnd()));
-//    connect(&watcher, SIGNAL(progressValueChanged(int)), this, SLOT(progressChanged(int)));
-//    QFuture<std::vector<Vertex>> future = QtConcurrent::run(calculator, &Calculator::codding);
-//    watcher.setFuture(future);
-    arrayOfVertexes = calculator->codding();
+    time.start();
+
+    map = calculator->codding();
     encodingEnd();
 }
 
@@ -142,6 +159,8 @@ void MainWindow::on_horizontalSlider_sliderMoved(int position)
 
 void MainWindow::on_pushButton_3_clicked()
 {
+    entropy = 0;
+    entropyCount = false;
     QMessageBox* box = new QMessageBox;
     if(ui->textEdit->toPlainText().size() == 0)
     {
@@ -152,9 +171,9 @@ void MainWindow::on_pushButton_3_clicked()
         createVertexArray();
 
         float summ = 0;
-        for(int i = 0; i < arrayOfVertexes.size(); i++)
+        for(int i = 0; i < arrayOfVertexes->size(); i++)
             {
-                summ += arrayOfVertexes.at(i).getValue();
+                summ += arrayOfVertexes->at(i)->getValue();
             }
 
         if(round(summ*10)/10 != 1.0)
@@ -162,7 +181,7 @@ void MainWindow::on_pushButton_3_clicked()
                 box->setText("Summ of numbers need to be 1, in your case it is " + QString::number(summ));
                 box->show();
             }
-        else if(arrayOfVertexes.size() == 1)
+        else if(arrayOfVertexes->size() == 1)
             {
                 box->setText("You need at least 2 elements!");
                 box->show();
@@ -180,27 +199,45 @@ void MainWindow::on_pushButton_3_clicked()
                 ui->pushButton_2->setEnabled(true);
         }
     }
+    ui->textEdit_2->setFocus();
+    ui->pushButton_3->setEnabled(false);
+}
+
+void MainWindow::on_textEdit_textChanged()
+{
+    ui->pushButton_3->setEnabled(true);
 }
 
 void MainWindow::encodingEnd()
 {
-    std::vector<Vertex> coddedVertexes;
+    std::vector<Vertex*>* coddedVertexes = new std::vector<Vertex*>;
 
-    coddedVertexes = arrayOfVertexes;/* watcher.result();*/
+    QMultiMap<float, Vertex*>::iterator it;
+    it = map.end() - 1;
+    while (it != map.begin() - 1) {
+        coddedVertexes->push_back((*it));
+        it--;
+    }
+
 
     QString text;
     float lenght = 0;
-    for(int i = 0; i < coddedVertexes.size(); i++)
+    for(int i = 0; i < coddedVertexes->size(); i++)
             {
-                text += coddedVertexes.at(i).getName() + "(" + QString::number(coddedVertexes.at(i).getValue()) + ")" + " = " + coddedVertexes.at(i).getCode() + "\n";
+                text += coddedVertexes->at(i)->getName() + "(" + QString::number(coddedVertexes->at(i)->getValue()) +
+                        ")" + " = " + coddedVertexes->at(i)->getCode() + "\n";
 
-                lenght += coddedVertexes.at(i).getCode().size() * coddedVertexes.at(i).getValue();
+                lenght += coddedVertexes->at(i)->getCode().size() * coddedVertexes->at(i)->getValue();
             }
 
-    ui->lenght->setText(QString::number(lenght/coddedVertexes.at(0).getName().size()));
+    lenght = lenght/ui->horizontalSlider->value();
+    ui->lenght->setText(QString::number(lenght));
     ui->textEdit_2->setText(text);
-    ui->Redundancy->setText(QString::number(1-(ui->Entropy->text().toFloat()/lenght)));
-    ui->statusBar->showMessage("Number of permutations: " + QString::number(coddedVertexes.size()));
+    ui->Redundancy->setText(QString::number(1.0-(entropy/lenght)));
+    ui->statusBar->showMessage("Number of permutations: " + QString::number(coddedVertexes->size()) +
+                               "          Elapsed time: " + QString::number((float)time.elapsed()/1000) + " seconds");
+
+
 }
 
 void MainWindow::progressChanged(int i)
@@ -210,5 +247,5 @@ void MainWindow::progressChanged(int i)
 
 void MainWindow::on_MainWindow_destroyed()
 {
-    watcher.cancel();
+
 }
